@@ -1,0 +1,13 @@
+{
+  "manifest_version": 3,
+  "name": "Tab Title Picker",
+  "version": "1.0",
+  "description": "A Chrome extension that shows the current tab's title in a popup",
+  "permissions": [
+    "activeTab"
+  ],
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "Show Tab Title"
+  }
+}
