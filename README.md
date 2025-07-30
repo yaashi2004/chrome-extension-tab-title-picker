@@ -31,7 +31,6 @@ This project is a Chrome Extension that takes LinkedIn profile URLs from the use
 - Stores data in a structured relational database
 - All code is version-controlled and uploaded on GitHub
 
----
 
 
 ---
@@ -53,6 +52,7 @@ This project is a Chrome Extension that takes LinkedIn profile URLs from the use
 
 cd backend
 npm install
+
 # Set up your DB credentials in .env
 node app.js
 
