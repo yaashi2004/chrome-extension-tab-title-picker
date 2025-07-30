@@ -2,7 +2,7 @@
 Chrome Extension + Node.js backend for extracting and storing LinkedIn profile data.
 
 # 📸 Screenshots
-![Extension Screenshot](./Chrome-Extension-UI.png)
+![Extension Screenshot](.screenshots/Chrome-Extension-UI.png)
 
 
 
