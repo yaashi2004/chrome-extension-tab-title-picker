@@ -1,93 +1,33 @@
 const { Sequelize, DataTypes } = require('sequelize');
 const path = require('path');
 
-// Database configuration
+// Setup database connection
 const sequelize = new Sequelize({
   dialect: 'sqlite',
-  storage: path.join(__dirname, '..', 'database.sqlite'),
-  logging: console.log, // Show SQL queries in development
-  define: {
-    timestamps: true,
-    underscored: false,
-    freezeTableName: true,
-  },
-  pool: {
-    max: 5,
-    min: 0,
-    acquire: 30000,
-    idle: 10000
-  }
+  storage: path.join(__dirname, '../database/linkedin_profiles.db'),
+  logging: process.env.NODE_ENV === 'development' ? console.log : false,
 });
 
-// Import Profile model
-const Profile = require('./profile')(sequelize, DataTypes);
+// Import models
+const db = { sequelize };
+db.Profile = require('./profile')(sequelize, DataTypes);
 
-// Initialize database function
+// Initialize database and sync models
 const initializeDatabase = async () => {
   try {
     console.log('🔄 Testing database connection...');
     await sequelize.authenticate();
-    console.log('✅ Database connection established successfully');
-    
-    console.log('🔄 Syncing database models...');
-    await sequelize.sync({ alter: true }); // alter: true will update tables without dropping data
-    console.log('✅ Database models synced successfully');
-    
-    console.log('✅ Database initialization complete');
+    console.log('✅ Database connected');
+
+    console.log('🔄 Synchronizing models...');
+    // Create tables if they don't exist; do not alter existing schema or create backups
+    await sequelize.sync({ alter: false });
+    console.log('✅ Models synchronized');
     return true;
-  } catch (error) {
-    console.error('❌ Database initialization failed:', error.message);
+  } catch (err) {
+    console.error('❌ Database init failed:', err);
     return false;
   }
 };
 
-// Test connection function
-const testConnection = async () => {
-  try {
-    await sequelize.authenticate();
-    console.log('✅ Database connection test successful');
-    return true;
-  } catch (error) {
-    console.error('❌ Database connection test failed:', error.message);
-    return false;
-  }
-};
-
-// Sync database function
-const syncDatabase = async (force = false) => {
-  try {
-    console.log('🔄 Syncing database...');
-    await sequelize.sync({ force });
-    console.log('✅ Database synced successfully');
-    
-    if (force) {
-      console.log('⚠️  All tables were dropped and recreated');
-    }
-    
-    return true;
-  } catch (error) {
-    console.error('❌ Database sync failed:', error.message);
-    return false;
-  }
-};
-
-// Close database connection
-const closeDatabase = async () => {
-  try {
-    await sequelize.close();
-    console.log('✅ Database connection closed');
-  } catch (error) {
-    console.error('❌ Error closing database:', error.message);
-  }
-};
-
-// Export everything
-module.exports = {
-  sequelize,
-  Sequelize,
-  Profile,
-  initializeDatabase,  // This was missing!
-  testConnection,
-  syncDatabase,
-  closeDatabase
-};
+module.exports = { ...db, initializeDatabase };

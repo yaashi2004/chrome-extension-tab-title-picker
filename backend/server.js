@@ -896,7 +896,7 @@ app.use((error, req, res, next) => {
 const startServer = async () => {
     try {
         console.log('🚀 Starting LinkedIn Profile Scraper API Server...');
-        console.log('📊 Phase 4: Complete REST API');
+      
         
         // Initialize database
         console.log('🔄 Initializing database...');
@@ -911,7 +911,7 @@ const startServer = async () => {
         const server = app.listen(PORT, () => {
             console.log('🚀===========================================🚀');
             console.log('   LinkedIn Profile Scraper API Server      ');
-            console.log('         Phase 4: Complete REST API         ');
+           
             console.log('🚀===========================================🚀');
             console.log(`✅ Server running on port ${PORT}`);
             console.log(`🌐 API Root: http://localhost:${PORT}/api`);
@@ -925,11 +925,11 @@ const startServer = async () => {
 
             console.log(`🔍 Search Profiles: GET http://localhost:${PORT}/api/profiles/search/:query`);
             console.log(`🧪 Test Database: GET http://localhost:${PORT}/api/test/database`);
-            console.log(`🕒 Started: ${new Date().toLocaleString()}`);
+          
             console.log('🚀===========================================🚀');
-            console.log('✅ Phase 4 Complete! REST API Ready! 🎯');
+           
             console.log('🔌 Chrome Extension can now connect to API');
-            console.log('🎯 Next: Phase 5 - Chrome Extension Foundation');
+           
             console.log('🚀===========================================🚀');
         });
         
