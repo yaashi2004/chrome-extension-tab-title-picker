@@ -2,15 +2,18 @@
   "manifest_version": 3,
   "name": "LinkedIn Profile Scraper",
   "version": "1.0.0",
-  "description": "Extract LinkedIn profile data and save to backend database",
+  "description": "Extract LinkedIn profile data and save to backend database with advanced automation",
   "permissions": [
     "activeTab",
     "storage",
-    "scripting"
+    "scripting",
+    "tabs",
+    "notifications"
   ],
   "host_permissions": [
     "https://*.linkedin.com/*",
-    "http://localhost:3000/*"
+    "http://localhost:3000/*",
+    "https://localhost:3000/*"
   ],
   "action": {
     "default_popup": "popup.html",

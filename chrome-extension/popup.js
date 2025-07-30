@@ -1,4 +1,4 @@
-// popup.js - LinkedIn Profile Scraper Extension
+// popup.js - LinkedIn Profile Scraper Extension (Updated for Background Script)
 document.addEventListener('DOMContentLoaded', function() {
     // DOM Elements
     const urlInput = document.getElementById('urlInput');
@@ -12,29 +12,29 @@ document.addEventListener('DOMContentLoaded', function() {
     const statusContainer = document.getElementById('statusContainer');
 
     // Configuration
-    const API_BASE_URL = 'http://localhost:3000/api';
     const MIN_URLS_REQUIRED = 3;
     
     // State
     let linkedinUrls = [];
     let isProcessing = false;
+    let processingStats = null;
 
     // Initialize
     init();
 
     async function init() {
-        console.log('🔄 Initializing LinkedIn Profile Scraper...');
+        console.log('🔄 Initializing LinkedIn Profile Scraper popup...');
         await checkAPIStatus();
         await loadStoredUrls();
+        await loadProcessingStatus();
         updateUI();
-        console.log('✅ Initialization complete');
+        console.log('✅ Popup initialization complete');
     }
 
     // ====================
     // URL MANAGEMENT
     // ====================
 
-    // Add URL to queue
     addUrlBtn.addEventListener('click', addUrl);
     urlInput.addEventListener('keypress', function(e) {
         if (e.key === 'Enter') addUrl();
@@ -43,7 +43,6 @@ document.addEventListener('DOMContentLoaded', function() {
     function addUrl() {
         const url = urlInput.value.trim();
         
-        // Validation
         if (!url) {
             showStatus('warning', '⚠️ Please enter a LinkedIn URL');
             return;
@@ -54,33 +53,47 @@ document.addEventListener('DOMContentLoaded', function() {
             return;
         }
 
-        if (linkedinUrls.includes(url)) {
+        const normalizedUrl = normalizeLinkedInUrl(url);
+
+        if (linkedinUrls.includes(normalizedUrl)) {
             showStatus('warning', '⚠️ This URL is already in the queue');
             return;
         }
 
-        // Add URL
-        linkedinUrls.push(url);
+        linkedinUrls.push(normalizedUrl);
         urlInput.value = '';
         saveUrls();
         updateUI();
         showStatus('success', `✅ URL added! (${linkedinUrls.length} total)`);
         
-        console.log('📝 URL added:', url);
+        console.log('📝 URL added:', normalizedUrl);
     }
 
-    // Remove URL from queue
-    window.removeUrl = function(index) {
+    // // Remove URL from queue
+    // window.removeUrl = function(index) {
+    //     const removedUrl = linkedinUrls[index];
+    //     linkedinUrls.splice(index, 1);
+    //     saveUrls();
+    //     updateUI();
+    //     showStatus('info', 'ℹ️ URL removed from queue');
+    //     console.log('🗑️ URL removed:', removedUrl);
+    // };
+
+   // Remove URL from queue
+    function removeUrl(index) {
         const removedUrl = linkedinUrls[index];
         linkedinUrls.splice(index, 1);
         saveUrls();
         updateUI();
         showStatus('info', 'ℹ️ URL removed from queue');
         console.log('🗑️ URL removed:', removedUrl);
-    };
+    }
+
+
+
 
     // ====================
-    // BATCH PROCESSING (MAIN FUNCTIONALITY)
+    // BATCH PROCESSING (Uses Background Script)
     // ====================
 
     processBtn.addEventListener('click', async function() {
@@ -89,125 +102,120 @@ document.addEventListener('DOMContentLoaded', function() {
             return;
         }
 
-        console.log('🚀 Starting batch processing of', linkedinUrls.length, 'URLs');
-        
-        isProcessing = true;
-        updateUI();
-
-        processBtn.innerHTML = '<span class="loading"></span>Processing URLs...';
-        showStatus('info', '🔄 Starting batch processing...');
-
-        let successCount = 0;
-        let errorCount = 0;
-        const results = [];
-
-        try {
-            for (let i = 0; i < linkedinUrls.length; i++) {
-                const url = linkedinUrls[i];
-                
-                processBtn.innerHTML = `<span class="loading"></span>Processing ${i + 1}/${linkedinUrls.length}`;
-                showStatus('info', `🔄 Processing: ${getShortUrl(url)}`);
-
-                try {
-                    console.log(`📊 Processing URL ${i + 1}/${linkedinUrls.length}:`, url);
-
-                    // Step 1: Open LinkedIn profile in new tab
-                    const tab = await chrome.tabs.create({ 
-                        url: url, 
-                        active: false 
-                    });
-
-                    console.log('📂 Tab opened:', tab.id);
-
-                    // Step 2: Wait for page to load
-                    await wait(3000);
-
-                    // Step 3: Extract profile data
-                    const results = await chrome.scripting.executeScript({
-                        target: { tabId: tab.id },
-                        function: extractLinkedInProfile
-                    });
-
-                    if (results[0].result) {
-                        const profileData = results[0].result;
-                        profileData.url = url;
-
-                        console.log('📊 Profile data extracted:', profileData.name || 'Unknown');
-
-                        // Step 4: Send to backend API
-                        const response = await fetch(`${API_BASE_URL}/profiles`, {
-                            method: 'POST',
-                            headers: {
-                                'Content-Type': 'application/json',
-                            },
-                            body: JSON.stringify(profileData)
-                        });
-
-                        const result = await response.json();
-
-                        if (result.success) {
-                            successCount++;
-                            results.push({
-                                url,
-                                status: 'success',
-                                name: profileData.name,
-                                id: result.data.profile.id
-                            });
-                            showStatus('success', `✅ Saved: ${profileData.name || 'Profile'}`);
-                            console.log('✅ Profile saved successfully:', result.data.profile.id);
-                        } else {
-                            errorCount++;
-                            results.push({ url, status: 'error', error: result.message });
-                            showStatus('error', `❌ API Error: ${result.message}`);
-                            console.error('❌ API Error:', result.message);
-                        }
-                    } else {
-                        errorCount++;
-                        results.push({ url, status: 'error', error: 'Failed to extract profile data' });
-                        showStatus('error', `❌ Failed to extract: ${getShortUrl(url)}`);
-                        console.error('❌ Failed to extract profile data from:', url);
-                    }
-
-                    // Step 5: Close the tab
-                    await chrome.tabs.remove(tab.id);
-                    console.log('🔒 Tab closed:', tab.id);
-
-                } catch (error) {
-                    errorCount++;
-                    results.push({ url, status: 'error', error: error.message });
-                    showStatus('error', `❌ Error processing: ${getShortUrl(url)}`);
-                    console.error('❌ Error processing URL:', url, error);
-                }
-
-                // Small delay between requests
-                await wait(1000);
-            }
-
-            // Final results
-            const totalProcessed = successCount + errorCount;
-            showStatus('success', `🎉 Batch complete! Success: ${successCount}/${totalProcessed}, Errors: ${errorCount}`);
-            
-            console.log('🎉 Batch processing complete:', {
-                total: totalProcessed,
-                success: successCount,
-                errors: errorCount,
-                results
-            });
-
-            // Clear queue after successful processing
-            if (successCount > 0) {
-                linkedinUrls = [];
-                saveUrls();
-            }
-
-        } catch (error) {
-            showStatus('error', '❌ Batch processing failed: ' + error.message);
-            console.error('❌ Batch processing failed:', error);
+        if (isProcessing) {
+            // Stop processing
+            await stopBatchProcessing();
+        } else {
+            // Start processing
+            await startBatchProcessing();
         }
+    });
 
+    async function startBatchProcessing() {
+        console.log('🚀 Starting batch processing via background script');
+        
+        try {
+            isProcessing = true;
+            updateUI();
+            
+            showStatus('info', '🔄 Starting batch processing...');
+            
+            // Send message to background script to start processing
+            const response = await chrome.runtime.sendMessage({
+                action: 'startBatchProcessing',
+                data: {
+                    urls: linkedinUrls
+                }
+            });
+            
+            if (response.success) {
+                console.log('✅ Batch processing completed:', response.data.summary);
+                
+                const { summary } = response.data;
+                showStatus('success', 
+                    `🎉 Batch complete! ${summary.success}/${summary.total} profiles processed successfully`
+                );
+                
+                // Clear queue after successful processing
+                if (summary.success > 0) {
+                    linkedinUrls = [];
+                    saveUrls();
+                }
+                
+            } else {
+                throw new Error(response.error);
+            }
+            
+        } catch (error) {
+            console.error('❌ Batch processing failed:', error);
+            showStatus('error', '❌ Batch processing failed: ' + error.message);
+        }
+        
         isProcessing = false;
         updateUI();
+    }
+
+    async function stopBatchProcessing() {
+        console.log('⏹️ Stopping batch processing');
+        
+        try {
+            const response = await chrome.runtime.sendMessage({
+                action: 'stopBatchProcessing'
+            });
+            
+            if (response.success) {
+                showStatus('info', 'ℹ️ Batch processing stopped');
+            }
+            
+        } catch (error) {
+            console.error('❌ Failed to stop processing:', error);
+        }
+        
+        isProcessing = false;
+        updateUI();
+    }
+
+    // ====================
+    // PROGRESS MONITORING
+    // ====================
+
+    // Listen for progress updates from background script
+    chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+        if (message.action === 'progressUpdate') {
+            updateProgress(message.data);
+        }
     });
+
+    function updateProgress(progressData) {
+        const { processed, total, currentUrl, progress } = progressData;
+        
+        processBtn.innerHTML = `
+            <span class="loading"></span>
+            Processing ${processed}/${total} (${progress}%)
+        `;
+        
+        showStatus('info', `🔄 Processing: ${getShortUrl(currentUrl)} (${processed}/${total})`);
+    }
+
+    async function loadProcessingStatus() {
+        try {
+            const response = await chrome.runtime.sendMessage({
+                action: 'getProcessingStatus'
+            });
+            
+            if (response.success) {
+                const status = response.data;
+                isProcessing = status.isProcessing;
+                
+                if (isProcessing) {
+                    showStatus('info', `🔄 Processing in progress: ${status.processedCount}/${status.totalUrls}`);
+                }
+            }
+            
+        } catch (error) {
+            console.warn('Could not load processing status:', error.message);
+        }
+    }
 
     // ====================
     // API MANAGEMENT
@@ -217,29 +225,26 @@ document.addEventListener('DOMContentLoaded', function() {
 
     async function checkAPIStatus() {
         try {
-            console.log('🔍 Checking API status...');
+            console.log('🔍 Checking API status via background script...');
             apiStatusText.textContent = 'Checking...';
             statusDot.className = 'status-dot';
             
-            const response = await fetch(`${API_BASE_URL}/health`, {
-                method: 'GET',
-                headers: {
-                    'Content-Type': 'application/json'
-                }
+            const response = await chrome.runtime.sendMessage({
+                action: 'testApiConnection'
             });
             
-            if (response.ok) {
-                const result = await response.json();
+            if (response.success && response.data.status === 'online') {
                 apiStatusText.textContent = 'Online';
                 statusDot.className = 'status-dot online';
-                console.log('✅ API is online:', result.phase);
+                console.log('✅ API is online');
                 
                 if (statusContainer.children.length === 0) {
                     showStatus('success', '✅ Backend API is online and ready');
                 }
             } else {
-                throw new Error(`HTTP ${response.status}`);
+                throw new Error(response.error || 'API offline');
             }
+            
         } catch (error) {
             apiStatusText.textContent = 'Offline';
             statusDot.className = 'status-dot offline';
@@ -249,12 +254,37 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     // ====================
+    // STATISTICS
+    // ====================
+
+    async function loadStatistics() {
+        try {
+            const response = await chrome.runtime.sendMessage({
+                action: 'getStatistics'
+            });
+            
+            if (response.success) {
+                const stats = response.data;
+                console.log('📊 Extension statistics:', stats);
+                
+                // You can display stats in UI if needed
+                if (stats.totalProcessed > 0) {
+                    const successRate = Math.round((stats.totalSuccess / stats.totalProcessed) * 100);
+                    console.log(`📈 Success rate: ${successRate}% (${stats.totalSuccess}/${stats.totalProcessed})`);
+                }
+            }
+            
+        } catch (error) {
+            console.warn('Could not load statistics:', error.message);
+        }
+    }
+
+    // ====================
     // UTILITY FUNCTIONS
     // ====================
 
     function isValidLinkedInUrl(url) {
         try {
-            // Add protocol if missing
             if (!url.startsWith('http://') && !url.startsWith('https://')) {
                 url = 'https://' + url;
             }
@@ -264,6 +294,21 @@ document.addEventListener('DOMContentLoaded', function() {
                    urlObj.pathname.includes('/in/');
         } catch {
             return false;
+        }
+    }
+
+    function normalizeLinkedInUrl(url) {
+        try {
+            if (!url.startsWith('http://') && !url.startsWith('https://')) {
+                url = 'https://' + url;
+            }
+            
+            const urlObj = new URL(url);
+            let cleanPath = urlObj.pathname.replace(/\/$/, '');
+            
+            return `https://www.linkedin.com${cleanPath}`;
+        } catch {
+            return url;
         }
     }
 
@@ -284,9 +329,16 @@ document.addEventListener('DOMContentLoaded', function() {
 
         // Update process button
         const canProcess = linkedinUrls.length >= MIN_URLS_REQUIRED && !isProcessing;
-        processBtn.disabled = !canProcess;
+        const canStop = isProcessing;
         
-        if (!isProcessing) {
+        processBtn.disabled = !canProcess && !canStop;
+        
+        if (isProcessing) {
+            processBtn.innerHTML = `<span class="loading"></span>Stop Processing`;
+            processBtn.style.background = 'linear-gradient(135deg, #e74c3c 0%, #c0392b 100%)';
+        } else {
+            processBtn.style.background = 'linear-gradient(135deg, #57c4a3 0%, #4caf50 100%)';
+            
             if (linkedinUrls.length < MIN_URLS_REQUIRED) {
                 processBtn.innerHTML = `<span class="btn-icon">🚀</span>Process All Links (${MIN_URLS_REQUIRED - linkedinUrls.length} more needed)`;
             } else {
@@ -363,158 +415,17 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
-    function wait(ms) {
-        return new Promise(resolve => setTimeout(resolve, ms));
-    }
+    // ====================
+    // PERIODIC STATUS UPDATES
+    // ====================
+
+    // Check processing status every 2 seconds when popup is open
+    setInterval(async () => {
+        if (isProcessing) {
+            await loadProcessingStatus();
+        }
+    }, 2000);
+
+    // Load statistics on startup
+    loadStatistics();
 });
-
-// ====================
-// PROFILE EXTRACTION FUNCTION
-// ====================
-
-// This function gets injected into LinkedIn pages
-function extractLinkedInProfile() {
-    try {
-        console.log('🔍 Starting LinkedIn profile extraction...');
-        
-        // Wait for page to be fully loaded
-        if (document.readyState !== 'complete') {
-            console.log('⏳ Page not fully loaded, waiting...');
-            return null;
-        }
-
-        const profileData = {
-            name: '',
-            about: '',
-            bio: '',
-            location: '',
-            followerCount: 0,
-            connectionCount: 0,
-            bioLine: '',
-            headline: '',
-            industry: '',
-            extractionStatus: 'success'
-        };
-
-        // Extract name with multiple selectors
-        const nameSelectors = [
-            'h1.text-heading-xlarge.inline.t-24.v-align-middle.break-words',
-            'h1.text-heading-xlarge',
-            '.pv-text-details__left-panel h1',
-            '.ph5 h1',
-            '[data-generated-suggestion-target] h1'
-        ];
-        
-        for (const selector of nameSelectors) {
-            const element = document.querySelector(selector);
-            if (element && element.textContent.trim()) {
-                profileData.name = element.textContent.trim();
-                console.log('✅ Name extracted:', profileData.name);
-                break;
-            }
-        }
-
-        // Extract headline/bio line
-        const headlineSelectors = [
-            '.text-body-medium.break-words',
-            '.pv-text-details__left-panel .text-body-medium',
-            '.ph5 .text-body-medium',
-            '[data-generated-suggestion-target] .text-body-medium'
-        ];
-        
-        for (const selector of headlineSelectors) {
-            const element = document.querySelector(selector);
-            if (element && element.textContent.trim()) {
-                profileData.bioLine = element.textContent.trim();
-                profileData.headline = element.textContent.trim();
-                profileData.bio = element.textContent.trim();
-                console.log('✅ Headline extracted:', profileData.bioLine);
-                break;
-            }
-        }
-
-        // Extract location
-        const locationSelectors = [
-            '.text-body-small.inline.t-black--light.break-words',
-            '.pv-text-details__left-panel .text-body-small'
-        ];
-        
-        for (const selector of locationSelectors) {
-            const elements = document.querySelectorAll(selector);
-            for (const element of elements) {
-                const text = element.textContent.trim();
-                // Location usually doesn't contain numbers or bullet points
-                if (text && !text.includes('•') && !text.match(/\d+/) && text.length > 2 && text.length < 100) {
-                    profileData.location = text;
-                    console.log('✅ Location extracted:', profileData.location);
-                    break;
-                }
-            }
-            if (profileData.location) break;
-        }
-
-        // Extract about section
-        const aboutSelectors = [
-            '#about ~ * .inline-show-more-text',
-            '.pv-about-section .pv-shared-text-with-see-more',
-            '[data-generated-suggestion-target] .inline-show-more-text'
-        ];
-        
-        for (const selector of aboutSelectors) {
-            const element = document.querySelector(selector);
-            if (element && element.textContent.trim().length > profileData.bioLine.length) {
-                profileData.about = element.textContent.trim();
-                console.log('✅ About section extracted:', profileData.about.substring(0, 50) + '...');
-                break;
-            }
-        }
-
-        // Extract follower/connection counts
-        const connectionElements = document.querySelectorAll('.t-black--light, .t-normal, .pvs-header__optional-link');
-        for (const element of connectionElements) {
-            const text = element.textContent.trim().toLowerCase();
-            
-            if (text.includes('connection')) {
-                const match = text.match(/(\d+)/);
-                if (match) {
-                    profileData.connectionCount = parseInt(match[1]);
-                    console.log('✅ Connection count extracted:', profileData.connectionCount);
-                }
-            }
-            
-            if (text.includes('follower')) {
-                const match = text.match(/(\d+)/);
-                if (match) {
-                    profileData.followerCount = parseInt(match[1]);
-                    console.log('✅ Follower count extracted:', profileData.followerCount);
-                }
-            }
-        }
-
-        // Validate extracted data
-        if (!profileData.name || !profileData.bioLine) {
-            console.warn('⚠️ Incomplete profile data extracted');
-            profileData.extractionStatus = 'partial';
-        }
-
-        console.log('✅ Profile extraction complete:', {
-            name: profileData.name,
-            hasLocation: !!profileData.location,
-            hasBio: !!profileData.bioLine,
-            hasAbout: !!profileData.about,
-            followerCount: profileData.followerCount,
-            connectionCount: profileData.connectionCount
-        });
-
-        return profileData;
-        
-    } catch (error) {
-        console.error('❌ Profile extraction failed:', error);
-        return {
-            name: 'Extraction Failed',
-            bioLine: 'Could not extract profile data',
-            extractionStatus: 'failed',
-            extractionError: error.message
-        };
-    }
-}
