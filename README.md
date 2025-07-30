@@ -11,7 +11,7 @@ This project is a Chrome Extension that takes LinkedIn profile URLs from the use
 - Frontend: **Chrome Extension (JavaScript)**
 - Backend: **Node.js + Express**
 - ORM: **Sequelize**
-- Database: **PostgreSQL / MySQL** (Sequelize-supported)
+- Database:SQLite
 
 ---
 
@@ -55,6 +55,8 @@ cd backend
 npm install
 # Set up your DB credentials in .env
 node app.js
+
+ -----
 
 
 🧩 Chrome Extension Setup
