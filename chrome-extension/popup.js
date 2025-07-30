@@ -1,4 +1,4 @@
-// popup.js - LinkedIn Profile Scraper Extension (Updated for Background Script)
+// popup.js - LinkedIn Profile Scraper Extension
 document.addEventListener('DOMContentLoaded', function() {
     // DOM Elements
     const urlInput = document.getElementById('urlInput');
@@ -12,29 +12,41 @@ document.addEventListener('DOMContentLoaded', function() {
     const statusContainer = document.getElementById('statusContainer');
 
     // Configuration
+    const API_BASE_URL = 'http://localhost:3000/api';
     const MIN_URLS_REQUIRED = 3;
     
     // State
     let linkedinUrls = [];
     let isProcessing = false;
-    let processingStats = null;
 
     // Initialize
     init();
 
     async function init() {
-        console.log('🔄 Initializing LinkedIn Profile Scraper popup...');
+        console.log('🔄 Initializing LinkedIn Profile Scraper...');
         await checkAPIStatus();
         await loadStoredUrls();
-        await loadProcessingStatus();
         updateUI();
-        console.log('✅ Popup initialization complete');
+        setupEventDelegation(); // NEW: Set up event delegation
+        console.log('✅ Initialization complete');
+    }
+
+    // NEW FUNCTION: Set up event delegation for dynamically created elements
+    function setupEventDelegation() {
+        // Use event delegation on the parent container
+        urlList.addEventListener('click', function(e) {
+            if (e.target.classList.contains('remove-btn')) {
+                const index = parseInt(e.target.getAttribute('data-index'));
+                removeUrl(index);
+            }
+        });
     }
 
     // ====================
     // URL MANAGEMENT
     // ====================
 
+    // Add URL to queue
     addUrlBtn.addEventListener('click', addUrl);
     urlInput.addEventListener('keypress', function(e) {
         if (e.key === 'Enter') addUrl();
@@ -43,6 +55,7 @@ document.addEventListener('DOMContentLoaded', function() {
     function addUrl() {
         const url = urlInput.value.trim();
         
+        // Validation
         if (!url) {
             showStatus('warning', '⚠️ Please enter a LinkedIn URL');
             return;
@@ -53,33 +66,22 @@ document.addEventListener('DOMContentLoaded', function() {
             return;
         }
 
-        const normalizedUrl = normalizeLinkedInUrl(url);
-
-        if (linkedinUrls.includes(normalizedUrl)) {
+        if (linkedinUrls.includes(url)) {
             showStatus('warning', '⚠️ This URL is already in the queue');
             return;
         }
 
-        linkedinUrls.push(normalizedUrl);
+        // Add URL
+        linkedinUrls.push(url);
         urlInput.value = '';
         saveUrls();
         updateUI();
         showStatus('success', `✅ URL added! (${linkedinUrls.length} total)`);
         
-        console.log('📝 URL added:', normalizedUrl);
+        console.log('📝 URL added:', url);
     }
 
-    // // Remove URL from queue
-    // window.removeUrl = function(index) {
-    //     const removedUrl = linkedinUrls[index];
-    //     linkedinUrls.splice(index, 1);
-    //     saveUrls();
-    //     updateUI();
-    //     showStatus('info', 'ℹ️ URL removed from queue');
-    //     console.log('🗑️ URL removed:', removedUrl);
-    // };
-
-   // Remove URL from queue
+    // UPDATED: Remove URL from queue - no longer attached to window
     function removeUrl(index) {
         const removedUrl = linkedinUrls[index];
         linkedinUrls.splice(index, 1);
@@ -88,6 +90,7 @@ document.addEventListener('DOMContentLoaded', function() {
         showStatus('info', 'ℹ️ URL removed from queue');
         console.log('🗑️ URL removed:', removedUrl);
     }
+
 
 
 
@@ -323,22 +326,15 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
-    function updateUI() {
+     function updateUI() {
         // Update counter
         queueCounter.textContent = linkedinUrls.length;
 
         // Update process button
         const canProcess = linkedinUrls.length >= MIN_URLS_REQUIRED && !isProcessing;
-        const canStop = isProcessing;
+        processBtn.disabled = !canProcess;
         
-        processBtn.disabled = !canProcess && !canStop;
-        
-        if (isProcessing) {
-            processBtn.innerHTML = `<span class="loading"></span>Stop Processing`;
-            processBtn.style.background = 'linear-gradient(135deg, #e74c3c 0%, #c0392b 100%)';
-        } else {
-            processBtn.style.background = 'linear-gradient(135deg, #57c4a3 0%, #4caf50 100%)';
-            
+        if (!isProcessing) {
             if (linkedinUrls.length < MIN_URLS_REQUIRED) {
                 processBtn.innerHTML = `<span class="btn-icon">🚀</span>Process All Links (${MIN_URLS_REQUIRED - linkedinUrls.length} more needed)`;
             } else {
@@ -346,7 +342,7 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         }
 
-        // Update URL list
+        // UPDATED: Update URL list - removed inline onclick and event listener attachment
         if (linkedinUrls.length === 0) {
             urlList.innerHTML = `
                 <div class="empty-state">
@@ -360,11 +356,14 @@ document.addEventListener('DOMContentLoaded', function() {
                 <div class="url-item">
                     <div class="url-number">${index + 1}</div>
                     <div class="url-text">${getShortUrl(url)}</div>
-                    <button class="remove-btn" onclick="removeUrl(${index})">✕</button>
+                    <button class="remove-btn" data-index="${index}">✕</button>
                 </div>
             `).join('');
         }
     }
+
+    // ... (rest of your code remains the same) ...
+
 
     function showStatus(type, message) {
         // Remove existing status messages
