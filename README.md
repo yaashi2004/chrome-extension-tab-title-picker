@@ -44,7 +44,7 @@ GET /api/profiles/stats - View statistics
 
 POST /api/database/reset - Clear database
 
-## 🧹 Useful Commands
+##🧹Useful Commands
 ## Reset database
  POST http://localhost:3000/api/database/reset
 
