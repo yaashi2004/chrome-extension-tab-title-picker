@@ -1,7 +1,7 @@
 # 🔗 LinkedIn Profile Scraper
 Chrome Extension + Node.js backend for extracting and storing LinkedIn profile data.
 
-# 🚀 Quick Start 
+## 🚀 Quick Start 
 ## Backend Setup
 
 cd backend
@@ -45,10 +45,10 @@ GET /api/profiles/stats - View statistics
 POST /api/database/reset - Clear database
 
 ## 🧹 Useful Commands
-# Reset database
+## Reset database
  POST http://localhost:3000/api/database/reset
 
-# View stats
+## View stats
 http://localhost:3000/api/profiles/stats
 ## 📁 Structure
 ├── chrome-extension/   # Extension files
