@@ -920,4 +920,68 @@ const startServer = async () => {
             console.log(`🎯 Main Endpoint: POST http://localhost:${PORT}/api/profiles`);
             console.log(`📈 Get Profiles: GET http://localhost:${PORT}/api/profiles`);
             console.log(`📊 Profile Stats: GET http://localhost:${PORT}/api/profiles/stats`);
-            console.log(`
+            
+
+
+            console.log(`🔍 Search Profiles: GET http://localhost:${PORT}/api/profiles/search/:query`);
+            console.log(`🧪 Test Database: GET http://localhost:${PORT}/api/test/database`);
+            console.log(`🕒 Started: ${new Date().toLocaleString()}`);
+            console.log('🚀===========================================🚀');
+            console.log('✅ Phase 4 Complete! REST API Ready! 🎯');
+            console.log('🔌 Chrome Extension can now connect to API');
+            console.log('🎯 Next: Phase 5 - Chrome Extension Foundation');
+            console.log('🚀===========================================🚀');
+        });
+        
+        // Graceful shutdown handlers
+        const gracefulShutdown = async (signal) => {
+            console.log(`\n🛑 ${signal} received, shutting down gracefully...`);
+            
+            // Close HTTP server
+            server.close(async () => {
+                console.log('🔄 Closing database connections...');
+                
+                try {
+                    await sequelize.close();
+                    console.log('✅ Database connections closed');
+                } catch (error) {
+                    console.error('❌ Error closing database:', error.message);
+                }
+                
+                console.log('✅ Server shut down successfully');
+                process.exit(0);
+            });
+            
+            // Force shutdown after 10 seconds
+            setTimeout(() => {
+                console.error('❌ Forced shutdown after timeout');
+                process.exit(1);
+            }, 10000);
+        };
+        
+        // Register shutdown handlers
+        process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+        process.on('SIGINT', () => gracefulShutdown('SIGINT'));
+        
+        // Handle uncaught exceptions
+        process.on('uncaughtException', (error) => {
+            console.error('💥 Uncaught Exception:', error);
+            gracefulShutdown('UNCAUGHT_EXCEPTION');
+        });
+        
+        process.on('unhandledRejection', (reason, promise) => {
+            console.error('💥 Unhandled Rejection at:', promise, 'reason:', reason);
+            gracefulShutdown('UNHANDLED_REJECTION');
+        });
+        
+    } catch (error) {
+        console.error('❌ Failed to start server:', error);
+        process.exit(1);
+    }
+};
+
+// Start the server
+startServer();
+
+// Export for testing purposes
+module.exports = app;

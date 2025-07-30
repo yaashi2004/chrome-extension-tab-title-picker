@@ -1,0 +1,595 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LinkedIn Profile Scraper</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+        
+        :root {
+            --primary-blue: #0077b5;
+            --secondary-blue: #004471;
+            --accent-blue: #00a0dc;
+            --success-green: #57c4a3;
+            --warning-orange: #f99b1c;
+            --error-red: #e74c3c;
+            --glass-white: rgba(255, 255, 255, 0.1);
+            --glass-border: rgba(255, 255, 255, 0.2);
+            --text-primary: #ffffff;
+            --text-secondary: rgba(255, 255, 255, 0.8);
+            --shadow-soft: 0 8px 32px rgba(0, 0, 0, 0.1);
+            --shadow-medium: 0 12px 40px rgba(0, 0, 0, 0.15);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            width: 400px;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: linear-gradient(135deg, #0077b5 0%, #004471 50%, #00a0dc 100%);
+            color: var(--text-primary);
+            overflow: hidden;
+            position: relative;
+        }
+
+        /* Animated background elements */
+        body::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle, rgba(255,255,255,0.05) 1px, transparent 1px);
+            background-size: 25px 25px;
+            animation: float 30s linear infinite;
+            pointer-events: none;
+        }
+
+        @keyframes float {
+            0% { transform: translate(0, 0) rotate(0deg); }
+            100% { transform: translate(-25px, -25px) rotate(360deg); }
+        }
+
+        .container {
+            position: relative;
+            z-index: 10;
+            padding: 24px;
+        }
+
+        /* Header */
+        .header {
+            text-align: center;
+            margin-bottom: 28px;
+            position: relative;
+        }
+
+        .logo {
+            width: 56px;
+            height: 56px;
+            background: var(--glass-white);
+            border: 2px solid var(--glass-border);
+            border-radius: 18px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 16px;
+            font-size: 28px;
+            backdrop-filter: blur(20px);
+            box-shadow: var(--shadow-soft);
+            animation: glow 3s ease-in-out infinite alternate;
+        }
+
+        @keyframes glow {
+            0% { box-shadow: var(--shadow-soft); }
+            100% { box-shadow: 0 8px 32px rgba(0, 160, 220, 0.4); }
+        }
+
+        .title {
+            font-size: 22px;
+            font-weight: 700;
+            margin-bottom: 6px;
+            background: linear-gradient(135deg, #ffffff 0%, #e3f2fd 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .subtitle {
+            font-size: 13px;
+            font-weight: 400;
+            opacity: 0.8;
+            letter-spacing: 0.5px;
+        }
+
+        /* Main Card */
+        .main-card {
+            background: var(--glass-white);
+            backdrop-filter: blur(20px);
+            border: 1px solid var(--glass-border);
+            border-radius: 20px;
+            padding: 24px;
+            box-shadow: var(--shadow-medium);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .main-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.5), transparent);
+        }
+
+        /* Section Headers */
+        .section-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 16px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid var(--glass-border);
+        }
+
+        .section-icon {
+            width: 36px;
+            height: 36px;
+            background: var(--glass-white);
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 12px;
+            font-size: 18px;
+            backdrop-filter: blur(10px);
+        }
+
+        .section-title {
+            font-size: 16px;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        /* Input Section */
+        .input-section {
+            margin-bottom: 24px;
+        }
+
+        .input-group {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 16px;
+        }
+
+        .url-input {
+            flex: 1;
+            background: var(--glass-white);
+            border: 1px solid var(--glass-border);
+            border-radius: 12px;
+            padding: 14px 16px;
+            color: var(--text-primary);
+            font-size: 14px;
+            font-family: inherit;
+            backdrop-filter: blur(20px);
+            transition: all 0.3s ease;
+        }
+
+        .url-input::placeholder {
+            color: var(--text-secondary);
+        }
+
+        .url-input:focus {
+            outline: none;
+            border-color: var(--accent-blue);
+            box-shadow: 0 0 0 3px rgba(0, 160, 220, 0.2);
+            background: rgba(255, 255, 255, 0.15);
+        }
+
+        .add-btn {
+            background: linear-gradient(135deg, var(--accent-blue) 0%, var(--primary-blue) 100%);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 12px;
+            padding: 14px 18px;
+            color: white;
+            font-size: 16px;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            backdrop-filter: blur(20px);
+            min-width: 60px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .add-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(0, 119, 181, 0.4);
+        }
+
+        /* URL Queue */
+        .queue-section {
+            margin-bottom: 24px;
+        }
+
+        .queue-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+
+        .queue-title {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .queue-counter {
+            background: var(--accent-blue);
+            color: white;
+            font-size: 12px;
+            font-weight: 700;
+            padding: 4px 10px;
+            border-radius: 20px;
+            min-width: 28px;
+            text-align: center;
+            animation: pulse-counter 2s ease-in-out infinite;
+        }
+
+        @keyframes pulse-counter {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+        }
+
+        .url-list {
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 12px;
+            max-height: 180px;
+            overflow-y: auto;
+            backdrop-filter: blur(10px);
+            border: 1px solid var(--glass-border);
+        }
+
+        .url-list::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .url-list::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 3px;
+        }
+
+        .url-list::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.3);
+            border-radius: 3px;
+        }
+
+        .url-item {
+            padding: 14px 16px;
+            border-bottom: 1px solid var(--glass-border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            transition: all 0.2s ease;
+        }
+
+        .url-item:hover {
+            background: var(--glass-white);
+        }
+
+        .url-item:last-child {
+            border-bottom: none;
+        }
+
+        .url-text {
+            flex: 1;
+            font-size: 12px;
+            color: var(--text-secondary);
+            word-break: break-all;
+            margin-right: 12px;
+        }
+
+        .url-number {
+            background: var(--glass-white);
+            color: var(--text-primary);
+            font-size: 11px;
+            font-weight: 600;
+            padding: 4px 8px;
+            border-radius: 6px;
+            min-width: 24px;
+            text-align: center;
+            margin-right: 12px;
+        }
+
+        .remove-btn {
+            background: var(--error-red);
+            border: none;
+            border-radius: 6px;
+            padding: 4px 8px;
+            color: white;
+            font-size: 12px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .remove-btn:hover {
+            background: #c62828;
+            transform: scale(1.05);
+        }
+
+        .empty-state {
+            padding: 32px 20px;
+            text-align: center;
+            color: var(--text-secondary);
+            font-style: italic;
+            font-size: 13px;
+        }
+
+        .empty-icon {
+            font-size: 32px;
+            margin-bottom: 8px;
+            opacity: 0.5;
+        }
+
+        /* Main Action Button */
+        .main-action {
+            margin-bottom: 20px;
+        }
+
+        .process-btn {
+            width: 100%;
+            background: linear-gradient(135deg, var(--success-green) 0%, #4caf50 100%);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            border-radius: 16px;
+            padding: 18px 24px;
+            color: white;
+            font-size: 16px;
+            font-weight: 700;
+            font-family: inherit;
+            cursor: pointer;
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            overflow: hidden;
+            backdrop-filter: blur(20px);
+            box-shadow: 0 8px 32px rgba(87, 196, 163, 0.3);
+        }
+
+        .process-btn::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+            transition: left 0.6s;
+        }
+
+        .process-btn:hover::before {
+            left: 100%;
+        }
+
+        .process-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 16px 48px rgba(87, 196, 163, 0.5);
+            border-color: rgba(255, 255, 255, 0.5);
+        }
+
+        .process-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none !important;
+            box-shadow: none !important;
+        }
+
+        .btn-icon {
+            margin-right: 10px;
+            font-size: 18px;
+        }
+
+        /* Status Section */
+        .status-section {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 16px 20px;
+            background: var(--glass-white);
+            border-radius: 12px;
+            backdrop-filter: blur(10px);
+            border: 1px solid var(--glass-border);
+        }
+
+        .api-status {
+            display: flex;
+            align-items: center;
+            font-size: 13px;
+            font-weight: 500;
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            margin-left: 8px;
+            animation: blink 2s ease-in-out infinite;
+        }
+
+        .status-dot.online {
+            background: var(--success-green);
+        }
+
+        .status-dot.offline {
+            background: var(--error-red);
+        }
+
+        @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.4; }
+        }
+
+        .test-api-btn {
+            background: var(--glass-white);
+            border: 1px solid var(--glass-border);
+            border-radius: 8px;
+            padding: 8px 16px;
+            color: var(--text-primary);
+            font-size: 12px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            backdrop-filter: blur(10px);
+        }
+
+        .test-api-btn:hover {
+            background: rgba(255, 255, 255, 0.15);
+            transform: translateY(-1px);
+        }
+
+        /* Progress/Status Messages */
+        .status-message {
+            padding: 14px 18px;
+            border-radius: 12px;
+            font-size: 13px;
+            font-weight: 500;
+            margin-top: 16px;
+            display: flex;
+            align-items: center;
+            backdrop-filter: blur(20px);
+            border: 1px solid;
+        }
+
+        .status-message.success {
+            background: rgba(87, 196, 163, 0.2);
+            border-color: rgba(87, 196, 163, 0.4);
+            color: #a5d6a7;
+        }
+
+        .status-message.error {
+            background: rgba(231, 76, 60, 0.2);
+            border-color: rgba(231, 76, 60, 0.4);
+            color: #ffcdd2;
+        }
+
+        .status-message.info {
+            background: var(--glass-white);
+            border-color: var(--glass-border);
+            color: var(--text-secondary);
+        }
+
+        .status-message.warning {
+            background: rgba(249, 155, 28, 0.2);
+            border-color: rgba(249, 155, 28, 0.4);
+            color: #ffcc80;
+        }
+
+        .message-icon {
+            margin-right: 10px;
+            font-size: 16px;
+        }
+
+        /* Loading Animation */
+        .loading {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top-color: white;
+            animation: spin 1s linear infinite;
+            margin-right: 10px;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* Responsive adjustments */
+        @media (max-width: 420px) {
+            body {
+                width: 100vw;
+            }
+            
+            .container {
+                padding: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <div class="logo">🔗</div>
+            <div class="title">LinkedIn Scraper Pro</div>
+            <div class="subtitle">Extract • Store • Analyze</div>
+        </div>
+
+        <!-- Main Card -->
+        <div class="main-card">
+            <!-- Add URLs Section -->
+            <div class="input-section">
+                <div class="section-header">
+                    <div class="section-icon">📝</div>
+                    <div class="section-title">Add LinkedIn URLs</div>
+                </div>
+                
+                <div class="input-group">
+                    <input 
+                        type="text" 
+                        class="url-input" 
+                        id="urlInput" 
+                        placeholder="Paste LinkedIn profile URL (e.g., linkedin.com/in/username)"
+                    >
+                    <button class="add-btn" id="addUrlBtn">➕</button>
+                </div>
+            </div>
+
+            <!-- URL Queue Section -->
+            <div class="queue-section">
+                <div class="queue-header">
+                    <div class="queue-title">🗂️ URL Queue</div>
+                    <div class="queue-counter" id="queueCounter">0</div>
+                </div>
+                
+                <div class="url-list" id="urlList">
+                    <div class="empty-state">
+                        <div class="empty-icon">📋</div>
+                        <div>No LinkedIn URLs added yet</div>
+                        <div style="font-size: 11px; margin-top: 4px; opacity: 0.7;">Add minimum 3 URLs to start processing</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Main Action Button -->
+            <div class="main-action">
+                <button class="process-btn" id="processBtn" disabled>
+                    <span class="btn-icon">🚀</span>
+                    Process All Links (Minimum 3 Required)
+                </button>
+            </div>
+
+            <!-- API Status -->
+            <div class="status-section">
+                <div class="api-status">
+                    <span>Backend API:</span>
+                    <span id="apiStatusText">Checking...</span>
+                    <div class="status-dot" id="statusDot"></div>
+                </div>
+                <button class="test-api-btn" id="testApiBtn">Test Connection</button>
+            </div>
+
+            <!-- Status Messages -->
+            <div id="statusContainer"></div>
+        </div>
+    </div>
+
+    <script src="popup.js"></script>
+</body>
+</html>
